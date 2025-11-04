@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* pełne okno, zero „białych pasów” */
+html, body, #root { height: 100%; width: 100%; margin: 0; padding: 0; }
+
+/* bazowy font + kolory */
+body {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: #800080;
+  background: #f5f5f5; /* tożsame z bg-neutral-100 */
+}
