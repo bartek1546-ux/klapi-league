@@ -113,25 +113,26 @@ const Shell = ({ adminName, onShowLogin, onLogout, children }) => {
   return (
     <div className="app" style={{minHeight:"100vh",background:"url('/background.png') center/cover fixed, #201541"}}>
       <header className="nav">
-        <div className="nav__inner">
-          <img src="/logo-klapi.png" alt="Kłapi League" className="nav__logo" />
-          {/* SCROLLABLE TABS (mobile friendly) */}
-          <div className="tabsScroll">
-            <a className="tab" href="#/">Strona główna</a>
-            <a className="tab" href="#/tabela">Tabela</a>
-            <a className="tab" href="#/players">Gracze</a>
-            <a className="tab" href="#/calendar">Kalendarz</a>
-            <a className="tab" href="#/news">Gazetka</a>
-            {/* Admin buttons moved inside scrollable tabs */}
-            {adminName ? (
-              <>
-                <a className="tab" href="#/admin">Panel administracyjny</a>
-                <a className="tab" href="#/admin-players">Gracze (admin)</a>
-                <button className="tab tab--button" onClick={onLogout}>Wyloguj</button>
-              </>
-            ) : (
-              <button className="tab tab--button" onClick={onShowLogin}>Admin (logowanie)</button>
-            )}
+        {/* PRZEWIJANY pasek (wraz z przyciskami admina) */}
+        <div className="nav__scroll">
+          <div className="nav__inner">
+            <div className="nav__left">
+              <img src="/logo-klapi.png" alt="Kłapi League" className="nav__logo" />
+              <a className="tab" href="#/">Strona główna</a>
+              <a className="tab" href="#/tabela">Tabela</a>
+              <a className="tab" href="#/players">Gracze</a>
+              <a className="tab" href="#/calendar">Kalendarz</a>
+              <a className="tab" href="#/news">Gazetka</a>
+              {adminName ? (
+                <>
+                  <a className="tab" href="#/admin">Panel admina</a>
+                  <a className="tab" href="#/admin-players">Gracze (admin)</a>
+                  <button className="tab btn--ghost" onClick={onLogout}>Wyloguj</button>
+                </>
+              ) : (
+                <button className="tab btn--ghost" onClick={onShowLogin}>Admin (logowanie)</button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -156,40 +157,23 @@ const Top3Row = ({ idx, children }) => {
   return <tr style={{background:bg}}>{children}</tr>;
 };
 
-/** Klikalne kafelki formy z mapowaniem do GP */
-const FormSquaresNav = ({ positions, gpIds }) => {
-  const last3 = [...positions].slice(-3);
-  const last3Gp = [...gpIds].slice(-3);
-  return (
-    <div className="formSquaresNav">
-      {last3.map((pos,i)=>{
-        const bg = pos===1 ? "#06d6a0" : pos===5 ? "#ef476f" : "#3f2b86";
-        const color = pos===1 ? "#0b1f17" : "#cdbfff";
-        const gid = last3Gp[i];
-        return (
-          <button key={i}
-            title={gid?`Przejdź do GP`:"Brak GP"}
-            onClick={()=> gid && (location.hash=`#/gp/${gid}`)}
-            className="formSquareBtn"
-            style={{background:bg,color}}
-          >{pos}</button>
-        );
-      })}
-    </div>
-  );
-};
-
-/** Proste nieklikalne kwadraty (pozostałe miejsca) */
-const FormSquares = ({ form }) => {
+const FormSquares = ({ form, gpIds }) => {
+  // pokaż ostatnie 3 i pozwól kliknąć do odpow. GP
   const last3 = [...form].slice(-3);
+  const last3Gp = gpIds ? gpIds.slice(-3) : [];
   return (
-    <div className="formSquaresNav">
+    <div style={{display:"flex",gap:6}}>
       {last3.map((pos,i)=>{
         const bg = pos===1 ? "#06d6a0" : pos===5 ? "#ef476f" : "#3f2b86";
         const color = pos===1 ? "#0b1f17" : "#cdbfff";
-        return (
-          <div key={i} className="formSquareBtn" style={{background:bg,color}}>{pos}</div>
+        const gpHref = last3Gp[i] ? `#/gp/${last3Gp[i]}` : null;
+        const box = (
+          <div key={i} style={{
+            width:22,height:22,borderRadius:4,display:"grid",placeItems:"center",
+            background:bg,color, fontWeight:700, fontSize:12, cursor: gpHref?"pointer":"default"
+          }}>{pos}</div>
         );
+        return gpHref ? <a key={i} href={gpHref} title="Przejdź do GP">{box}</a> : box;
       })}
     </div>
   );
@@ -367,7 +351,7 @@ const Home = ({ state }) => {
                 <Tooltip />
                 <Legend />
                 {players.map((p,idx)=>(
-                  <Line key={p.id} type="monotone" dataKey={p.name} stroke={COLORS[idx%COLORS.length]} strokeWidth={2} dot={false}/>
+                  <Line key={p.id} type="monotone" dataKey={p.name} stroke={["#ffd166","#06d6a0","#1b9aaa","#ef476f","#8338ec"][idx%5]} strokeWidth={2} dot={false}/>
                 ))}
               </LineChart>
             </ResponsiveContainer>
@@ -387,11 +371,15 @@ const Home = ({ state }) => {
               <Legend />
               <ReferenceLine y={1} stroke="#ffd166"/>
               {players.map((p,idx)=>(
-                <Line key={p.id} type="monotone" dataKey={p.name} stroke={COLORS[idx%COLORS.length]} strokeWidth={2} dot={false}/>
+                <Line key={p.id} type="monotone" dataKey={p.name} stroke={["#ffd166","#06d6a0","#1b9aaa","#ef476f","#8338ec"][idx%5]} strokeWidth={2} dot={false}/>
               ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      <div style={{marginTop:12, textAlign:"right"}}>
+        <a className="btn small" href="#/">← Strona główna</a>
       </div>
     </>
   );
@@ -412,7 +400,7 @@ const Tabela = ({ state }) => {
         if(!g.results) return null;
         const list = Object.entries(g.results).map(([pid,a])=>({pid,s:sum(a)})).sort((a,b)=>a.s-b.s);
         return list.findIndex(t=>t.pid===p.id)+1;
-      }).filter(Boolean);
+      }).filter(x=>x!=null);
       const wins = form.filter(x=>x===1).length;
       return {...p,total,form,wins};
     }).sort((a,b)=>a.total-b.total);
@@ -422,9 +410,6 @@ const Tabela = ({ state }) => {
 
   return (
     <div className="card">
-      <div className="pageTop">
-        <a className="btn small" href="#/">← Strona główna</a>
-      </div>
       <h2>Tabela</h2>
       <div className="tableWrap">
         <table className="table">
@@ -434,20 +419,24 @@ const Tabela = ({ state }) => {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r,i)=>(
-              <Top3Row key={r.id} idx={i}>
-                <td>{i+1}</td>
-                <td><a href={`#/player/${r.id}`}>{r.name}</a></td>
-                <td>{r.total}</td>
-                <td>{r.gap}</td>
-                <td>{r.wins}</td>
-                <td>
-                  <FormSquaresNav positions={r.form} gpIds={playedIds} />
-                </td>
-              </Top3Row>
-            ))}
+            {rows.map((r,i)=>{
+              const gpIdsForForm = playedIds; // 1:1 z form (chronologicznie)
+              return (
+                <Top3Row key={r.id} idx={i}>
+                  <td>{i+1}</td>
+                  <td><a href={`#/player/${r.id}`}>{r.name}</a></td>
+                  <td>{r.total}</td>
+                  <td>{r.gap}</td>
+                  <td>{r.wins}</td>
+                  <td><FormSquares form={r.form} gpIds={gpIdsForForm} /></td>
+                </Top3Row>
+            )})}
           </tbody>
         </table>
+      </div>
+
+      <div style={{marginTop:12, textAlign:"right"}}>
+        <a className="btn small" href="#/">← Strona główna</a>
       </div>
     </div>
   );
@@ -458,9 +447,6 @@ const Tabela = ({ state }) => {
 /* ============================== */
 const Players = ({ state }) => (
   <div className="card">
-    <div className="pageTop">
-      <a className="btn small" href="#/">← Strona główna</a>
-    </div>
     <h2>Gracze</h2>
     <div className="players">
       {state.players.map(p=>(
@@ -472,6 +458,9 @@ const Players = ({ state }) => (
           </div>
         </a>
       ))}
+    </div>
+    <div style={{marginTop:12, textAlign:"right"}}>
+      <a className="btn small" href="#/">← Strona główna</a>
     </div>
   </div>
 );
@@ -496,16 +485,14 @@ function calcPlayerStats(state, pid){
   });
   const wins = positions.filter(p=>p===1).length;
   const avgPos = positions.length ? (positions.reduce((a,b)=>a+b,0)/positions.length) : null;
-  const gpIds = gps.map(g=>g.id);
 
-  // najlepsza runda (indeks R1..R5 z najmniejszą średnią)
   const byRound = [0,1,2,3,4].map(i=>{
     const vals = gps.map(g=>g.results[pid][i]).filter(x=>x!=null);
     return vals.length? (sum(vals)/vals.length) : Infinity;
   });
   const bestRoundIndex = byRound.indexOf(Math.min(...byRound)); // 0..4
 
-  return { avgPerRound, avgPerGp, bestGp, worstGp, maxSpread, wins, avgPos, form: positions, bestRoundIndex, gpIds };
+  return { avgPerRound, avgPerGp, bestGp, worstGp, maxSpread, wins, avgPos, form: positions, bestRoundIndex, gpIds: gps.map(g=>g.id) };
 }
 
 const PlayerPage = ({ state, id }) => {
@@ -521,10 +508,11 @@ const PlayerPage = ({ state, id }) => {
 
   return (
     <div className="card">
-      <div className="pageTop" style={{display:"flex",gap:8}}>
-        <a className="btn small" href="#/players">← Wróć</a>
-        <a className="btn small" href="#/">← Strona główna</a>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <a className="btn" href="#/players">← Wróć</a>
+        <a className="btn" href="#/">← Strona główna</a>
       </div>
+
       <div className="profile">
         <img src={p.avatar||"/logo2.png"} alt=""/>
         <div>
@@ -544,9 +532,7 @@ const PlayerPage = ({ state, id }) => {
             <li><b>Największy rozstrzał w GP (max-min rund):</b> {stats.maxSpread}</li>
             <li><b>Wygrane GP:</b> {stats.wins}</li>
             {stats.avgPos!=null && <li><b>Śr. pozycja w GP:</b> {stats.avgPos.toFixed(2)}</li>}
-            <li style={{display:"flex",alignItems:"center",gap:8}}>
-              <b>Forma (3):</b> <FormSquaresNav positions={stats.form} gpIds={stats.gpIds} />
-            </li>
+            <li><b>Forma (3):</b> <FormSquares form={stats.form} gpIds={stats.gpIds}/></li>
             <li><b>Najlepsza runda:</b> {stats.bestRoundIndex>=0 ? `R${stats.bestRoundIndex+1}` : "—"}</li>
           </ul>
         </div>
@@ -584,19 +570,18 @@ const CalendarPage = ({ state }) => {
     Array.from({length:days}).map((_,i)=>new Date(view.y,view.m,i+1))
   );
 
-  /* FIX: porównujemy lokalne YYYY-MM-DD, nie toISOString() */
   const findGpOn = (d) => state.gps.find(g=>g.date===toLocalDateStr(d));
 
   return (
     <div className="card">
-      <div className="pageTop">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <h2 style={{display:"flex",alignItems:"center",gap:8,margin:0}}>
+          <button className="btn small" onClick={()=>setView(v=>({y: v.m===0?v.y-1:v.y, m:(v.m+11)%12}))}>←</button>
+          {new Date(view.y,view.m,1).toLocaleString(undefined,{month:"long",year:"numeric"})}
+          <button className="btn small" onClick={()=>setView(v=>({y: v.m===11?v.y+1:v.y, m:(v.m+1)%12}))}>→</button>
+        </h2>
         <a className="btn small" href="#/">← Strona główna</a>
       </div>
-      <h2 style={{display:"flex",alignItems:"center",gap:8}}>
-        <button className="btn small" onClick={()=>setView(v=>({y: v.m===0?v.y-1:v.y, m:(v.m+11)%12}))}>←</button>
-        {new Date(view.y,view.m,1).toLocaleString(undefined,{month:"long",year:"numeric"})}
-        <button className="btn small" onClick={()=>setView(v=>({y: v.m===11?v.y+1:v.y, m:(v.m+1)%12}))}>→</button>
-      </h2>
 
       <div className="month">
         {cells.map((d,i)=>(
@@ -635,7 +620,6 @@ const GPPage = ({ state, id }) => {
   if(!gp) return <div className="card"><h2>Nie znaleziono GP</h2></div>;
   const players = state.players;
 
-  // ranking wg sumy (bieżąco)
   const rankOrder = [...players].sort((a,b)=>{
     const sa = sum(gp.results?.[a.id]||[0,0,0,0,0]);
     const sb = sum(gp.results?.[b.id]||[0,0,0,0,0]);
@@ -644,11 +628,12 @@ const GPPage = ({ state, id }) => {
 
   return (
     <div className="card">
-      <div className="pageTop" style={{display:"flex",gap:8}}>
-        <a className="btn small" href="#/calendar">← Wróć</a>
-        <a className="btn small" href="#/">← Strona główna</a>
+      <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"space-between"}}>
+        <a className="btn" href="#/calendar">← Wróć</a>
+        <a className="btn" href="#/">← Strona główna</a>
       </div>
-      <h2 style={{margin:0}}>Grand Prix — {fmt(gp.date)}</h2>
+
+      <h2 style={{margin:"12px 0 6px"}}>Grand Prix — {fmt(gp.date)}</h2>
 
       <div className="tableWrap">
         <table className="table">
@@ -680,10 +665,10 @@ const NewsPage = ({ state }) => {
   const list = [...state.posts].sort((a,b)=>b.date-a.date);
   return (
     <div className="card">
-      <div className="pageTop">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <h2 style={{margin:0}}>Gazetka ligowa</h2>
         <a className="btn small" href="#/">← Strona główna</a>
       </div>
-      <h2>Gazetka ligowa</h2>
       <div className="newsList">
         {list.map(p=>(
           <a className="newsItem" key={p.id} href={`#/post/${p.id}`}>
@@ -703,8 +688,8 @@ const PostPage = ({ state, id, onAddComment }) => {
   if(!post) return <div className="card"><h2>Post nie istnieje</h2></div>;
   return (
     <div className="card">
-      <div className="pageTop" style={{display:"flex",gap:8}}>
-        <a className="btn small" href="#/news">← Wróć do gazetki</a>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <a className="btn" href="#/news">← Wróć do gazetki</a>
         <a className="btn small" href="#/">← Strona główna</a>
       </div>
       <h2 style={{margin:"12px 0 6px"}}>{post.title}</h2>
@@ -733,40 +718,44 @@ const PostPage = ({ state, id, onAddComment }) => {
 /* ============================== */
 /*             ADMIN              */
 /* ============================== */
-const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddPost, onDeletePost, adminName, onAddPlayedFromEdit }) => {
+// Uwaga: ta wersja zawiera edycję/usuwanie ROZEGRANYCH GP
+const AdminPage = ({
+  state,
+  onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP,
+  onAddPlayer, onUpdatePlayer, onDeletePlayer,
+  onAddPost, onDeletePost, adminName,
+  onAddPlayedFromEdit, // jeżeli używasz – zostaje
+  onEditPlayedDate, onEditPlayedResults
+}) => {
   const [datePlan,setDatePlan] = useState("");
   const [datePlayed,setDatePlayed] = useState("");
-  const [scores,setScores] = useState({}); // store as strings to allow empty values
+  const [scores,setScores] = useState({});
   const [title,setTitle]=useState(""); const [body,setBody]=useState("");
 
-  // Modal edycji wyników dla planowanego GP
-  const [editModal,setEditModal]=useState({open:false, gpId:null, scores:{}});
-
   const allPlanned = state.gps.filter(g=>g.planned).sort((a,b)=>a.date.localeCompare(b.date));
+  const allPlayed  = state.gps.filter(g=>!g.planned).sort((a,b)=>a.date.localeCompare(b.date));
 
   const setScore=(pid,i,val)=>{
-    const v = val; // keep as string ('' allowed)
+    const v=val; // zostawiamy string; liczbę rzutujemy dopiero przy zapisie
     setScores(prev=>{
       const next={...prev,[pid]:[...(prev[pid]||["","","","",""])]}; next[pid][i]=v; return next;
     });
   };
 
-  const setScoreEdit=(pid,i,val)=>{
-    const v = val; // keep as string
-    setEditModal(prev=>{
-      const nextScores={...prev.scores,[pid]:[...(prev.scores[pid]||["","","","",""])]}; nextScores[pid][i]=v;
-      return {...prev, scores: nextScores};
-    });
-  };
+  // modal do edycji wyników ROZEGRANYCH GP
+  const [editPlayed,setEditPlayed]=useState({open:false,gpId:null,scores:{}});
 
   return (
     <div className="card">
-      <div className="pageTop" style={{display:"flex",gap:8,alignItems:"center"}}>
-        <a className="btn small" href="#/">← Strona główna</a>
-        <a className="btn small" href="#/admin-players">Zarządzaj graczami</a>
-        <span className="muted" style={{marginLeft:"auto"}}>Zalogowano jako <b>{adminName}</b></span>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span className="muted">Zalogowano jako <b>{adminName}</b></span>
+        <div style={{display:"flex",gap:8}}>
+          <a className="btn small" href="#/admin-players">Zarządzaj graczami</a>
+          <a className="btn small" href="#/">Strona główna</a>
+        </div>
       </div>
 
+      {/* DODAJ planowane GP */}
       <div className="panel">
         <h3>Dodaj planowane GP</h3>
         <label>Data
@@ -777,18 +766,18 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
         </button>
       </div>
 
+      {/* DODAJ rozegrane GP */}
       <div className="panel">
         <h3>Dodaj rozegrane GP (5 rund)</h3>
         <label>Data
           <input type="date" value={datePlayed} onChange={e=>setDatePlayed(e.target.value)} />
         </label>
 
-        {/* Runda labels */}
+        {/* nagłówki R1..R5 */}
         <div className="roundsHeader">
           <span>R1</span><span>R2</span><span>R3</span><span>R4</span><span>R5</span>
         </div>
 
-        {/* HSCROLL LISTA GRACZY Z POLAMI RUND */}
         <div className="playersRounds">
           {state.players.map(p=>(
             <div key={p.id} className="playerRow">
@@ -796,16 +785,14 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
               <div className="hscroll">
                 <div className="rounds">
                   {[0,1,2,3,4].map(i=>(
-                    <input
-                      key={i}
-                      type="number"
-                      min="0"
-                      inputMode="numeric"
-                      aria-label={`R${i+1}`}
-                      placeholder={`R${i+1}`}
-                      value={(scores[p.id]?.[i] ?? "")}
-                      onChange={e=>setScore(p.id,i,e.target.value)}
-                    />
+                    <input key={i}
+                           type="number"
+                           min="0"
+                           inputMode="numeric"
+                           aria-label={`R${i+1}`}
+                           placeholder={`R${i+1}`}
+                           value={(scores[p.id]?.[i] ?? "")}
+                           onChange={e=>setScore(p.id,i,e.target.value)} />
                   ))}
                 </div>
               </div>
@@ -815,7 +802,8 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
 
         <button className="btn" onClick={()=>{
           if(!datePlayed) return alert("Wybierz datę");
-          const results={}; state.players.forEach(p=>{
+          const results={};
+          state.players.forEach(p=>{
             const arr = (scores[p.id]||["","","","",""]).map(v=>Number(v===""?0:v));
             results[p.id]=arr;
           });
@@ -823,6 +811,7 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
         }}>Zapisz GP</button>
       </div>
 
+      {/* EDYTUJ/USUŃ planowane */}
       <div className="panel">
         <h3>Edytuj/usuwaj planowane GP</h3>
         {allPlanned.length===0 ? <p className="muted">Brak planów.</p> : (
@@ -834,10 +823,6 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
                   <button className="btn small" onClick={()=>{
                     const nd=prompt("Nowa data (YYYY-MM-DD)", g.date); if(!nd) return; onEditPlanned(g.id,nd);
                   }}>Zmień datę</button>
-                  <button className="btn small" onClick={()=>{
-                    // otwórz modal do wpisania wyników
-                    setEditModal({open:true, gpId:g.id, scores:{}});
-                  }}>Wpisz wyniki</button>
                   <button className="btn small danger" onClick={()=>{ if(confirm("Usunąć planowane GP?")) onDeleteGP(g.id); }}>Usuń</button>
                 </div>
               </li>
@@ -846,6 +831,38 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
         )}
       </div>
 
+      {/* EDYTUJ/USUŃ rozegrane */}
+      <div className="panel">
+        <h3>Edytuj/usuń rozegrane GP</h3>
+        {allPlayed.length===0 ? <p className="muted">Brak rozegranych GP.</p> : (
+          <ul className="list">
+            {allPlayed.map(g=>(
+              <li key={g.id}>
+                <span><b>{fmt(g.date)}</b> <em style={{color:"#07c18a"}}>(rozegrane)</em></span>
+                <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+                  <button className="btn small" onClick={()=>{
+                    const nd=prompt("Nowa data (YYYY-MM-DD)", g.date); if(!nd) return; onEditPlayedDate(g.id,nd);
+                  }}>Zmień datę</button>
+                  <button className="btn small" onClick={()=>{
+                    const scores = {};
+                    if (g.results) {
+                      Object.entries(g.results).forEach(([pid,arr])=>{
+                        scores[pid] = (arr||[]).map(v=>String(v??""));
+                      });
+                    } else {
+                      state.players.forEach(p=>scores[p.id]=["","","","",""]);
+                    }
+                    setEditPlayed({open:true,gpId:g.id,scores});
+                  }}>Edytuj wyniki</button>
+                  <button className="btn small danger" onClick={()=>{ if(confirm("Usunąć to rozegrane GP?")) onDeleteGP(g.id); }}>Usuń</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* NOWY post */}
       <div className="panel">
         <h3>Nowy post (Gazetka)</h3>
         <label>Tytuł<input value={title} onChange={e=>setTitle(e.target.value)} /></label>
@@ -864,6 +881,7 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
         </ul>
       </div>
 
+      {/* Logi */}
       <div className="panel">
         <h3>Logi</h3>
         <ul className="log">
@@ -872,12 +890,11 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
           ))}</ul>
       </div>
 
-      {/* Modal edycji wyników planowanego GP */}
-      {editModal.open && (
-        <div className="modal__backdrop" onClick={()=>setEditModal({open:false,gpId:null,scores:{}})}>
+      {/* Modal edycji wyników ROZEGRANEGO GP */}
+      {editPlayed.open && (
+        <div className="modal__backdrop" onClick={()=>setEditPlayed({open:false,gpId:null,scores:{}})}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
-            <h3>Wpisz wyniki dla planowanego GP</h3>
-            <div className="muted">Po zapisaniu status zmieni się na <b>rozegrane</b>.</div>
+            <h3>Edytuj wyniki rozegranego GP</h3>
 
             <div className="roundsHeader" style={{marginTop:8}}>
               <span>R1</span><span>R2</span><span>R3</span><span>R4</span><span>R5</span>
@@ -897,8 +914,15 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
                           inputMode="numeric"
                           aria-label={`R${i+1}`}
                           placeholder={`R${i+1}`}
-                          value={(editModal.scores[p.id]?.[i] ?? "")}
-                          onChange={e=>setScoreEdit(p.id,i,e.target.value)}
+                          value={(editPlayed.scores[p.id]?.[i] ?? "")}
+                          onChange={e=>{
+                            const v=e.target.value;
+                            setEditPlayed(prev=>{
+                              const nextScores={...prev.scores,[p.id]:[...(prev.scores[p.id]||["","","","",""])]};
+                              nextScores[p.id][i]=v;
+                              return {...prev, scores: nextScores};
+                            })
+                          }}
                         />
                       ))}
                     </div>
@@ -908,14 +932,14 @@ const AdminPage = ({ state, onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP
             </div>
 
             <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12}}>
-              <button className="btn small" onClick={()=>setEditModal({open:false,gpId:null,scores:{}})}>Anuluj</button>
+              <button className="btn small" onClick={()=>setEditPlayed({open:false,gpId:null,scores:{}})}>Anuluj</button>
               <button className="btn small" onClick={()=>{
                 const results={}; state.players.forEach(p=>{
-                  const arr = (editModal.scores[p.id]||["","","","",""]).map(v=>Number(v===""?0:v));
+                  const arr = (editPlayed.scores[p.id]||["","","","",""]).map(v=>Number(v===""?0:v));
                   results[p.id]=arr;
                 });
-                onAddPlayedFromEdit(editModal.gpId, results);
-                setEditModal({open:false,gpId:null,scores:{}});
+                onEditPlayedResults(editPlayed.gpId, results);
+                setEditPlayed({open:false,gpId:null,scores:{}});
               }}>Zapisz wyniki</button>
             </div>
           </div>
@@ -932,10 +956,11 @@ const AdminPlayers = ({ state, onAddPlayer, onUpdatePlayer, onDeletePlayer }) =>
 
   return (
     <div className="card">
-      <div className="pageTop" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <h2 style={{margin:0}}>Zarządzanie graczami</h2>
         <div style={{display:"flex",gap:8}}>
-          <a className="btn small" href="#/">← Strona główna</a>
           <a className="btn small" href="#/admin">← Panel administracyjny</a>
+          <a className="btn small" href="#/">← Strona główna</a>
         </div>
       </div>
 
@@ -1062,13 +1087,18 @@ export default function App(){
       return {...s,gps:[...others,gp]};
     }); addLog("GP_ADD",`Dodano rozegrane GP na ${date}.`);
   };
-  // dodane: wpisywanie wyników dla istniejącego planowanego GP po jego id
-  const onAddPlayedFromEdit=(id,results)=>{
-    setState(s=>({...s,gps:s.gps.map(g=>g.id===id?{...g,planned:false,results}:g)}));
-    addLog("GP_EDIT_FROM_PLAN",`Wprowadzono wyniki dla planowanego GP (${id}).`);
-  };
   const onDeleteGP=(id)=>{
-    setState(s=>({...s,gps:s.gps.filter(g=>g.id!==id)})); addLog("GP_DELETE",`Usunięto GP (${id}).`); location.hash="#/calendar";
+    setState(s=>({...s,gps:s.gps.filter(g=>g.id!==id)})); addLog("GP_DELETE",`Usunięto GP (${id}).`); if (location.hash.startsWith("#/gp/")) location.hash="#/calendar";
+  };
+
+  // NOWE: edycja rozegranych GP
+  const onEditPlayedDate=(id,newDate)=>{
+    setState(s=>({...s,gps:s.gps.map(g=>g.id===id?{...g,date:newDate}:g)}));
+    addLog("GP_DATE_EDIT",`Zmieniono datę rozegranego GP (${id}) na ${newDate}.`);
+  };
+  const onEditPlayedResults=(id,results)=>{
+    setState(s=>({...s,gps:s.gps.map(g=>g.id===id?{...g,results,planned:false}:g)}));
+    addLog("GP_RESULTS_EDIT",`Zmieniono wyniki rozegranego GP (${id}).`);
   };
 
   const onAddPlayer=({name,avatar,bio})=>{
@@ -1119,9 +1149,10 @@ export default function App(){
               onAddPost={onAddPost}
               onDeletePost={onDeletePost}
               adminName={adminName}
-              onAddPlayedFromEdit={onAddPlayedFromEdit}
+              onEditPlayedDate={onEditPlayedDate}
+              onEditPlayedResults={onEditPlayedResults}
             />
-          : <div className="card"><div className="pageTop"><a className="btn small" href="#/">← Strona główna</a></div><h2>Wymagane logowanie admina (kliknij „Admin (logowanie)” u góry).</h2></div>
+          : <div className="card"><h2>Wymagane logowanie admina (kliknij „Admin (logowanie)” u góry).</h2></div>
         )}
 
         {r.view==="adminPlayers" && (adminName
@@ -1131,7 +1162,7 @@ export default function App(){
               onUpdatePlayer={onUpdatePlayer}
               onDeletePlayer={onDeletePlayer}
             />
-          : <div className="card"><div className="pageTop"><a className="btn small" href="#/">← Strona główna</a></div><h2>Wymagane logowanie admina.</h2></div>
+          : <div className="card"><h2>Wymagane logowanie admina.</h2></div>
         )}
       </Shell>
 
@@ -1142,23 +1173,18 @@ export default function App(){
         body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--ink);-webkit-tap-highlight-color:transparent}
         .container{max-width:1140px;margin:0 auto;padding:16px}
 
-        /* NAV */
+        /* NAV (scrollowalny) */
         .nav{position:sticky;top:0;z-index:50;background:rgba(18,10,34,.85);
              backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid #3f2b86}
-        .nav__inner{max-width:1140px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:8px 16px;height:64px}
-        .nav__logo{height:28px;width:auto;display:block;flex:0 0 auto}
-        .tabsScroll{
-          flex:1 1 auto; min-width:0;
-          display:flex; align-items:center; gap:8px;
-          overflow-x:auto; overscroll-behavior-x:contain;
-          -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;
-          scrollbar-width:thin;
-        }
-        .tabsScroll::-webkit-scrollbar{height:6px}
-        .tab{padding:8px 10px;border-radius:10px;color:var(--ink);text-decoration:none;white-space:nowrap;flex:0 0 auto;scroll-snap-align:start;background:transparent;border:1px solid transparent}
-        .tab:hover{background:rgba(255,255,255,.06)}
-        .tab--button{border:1px solid #3f2b86;background:#140c25;cursor:pointer}
-        .tab--button:hover{filter:brightness(1.05)}
+        .nav__scroll{overflow:auto hidden}
+        .nav__scroll::-webkit-scrollbar{height:8px}
+        .nav__scroll::-webkit-scrollbar-thumb{background:#3f2b86;border-radius:6px}
+        .nav__inner{min-width:max-content;display:flex;align-items:center;gap:8px;padding:8px 16px;height:64px}
+        .nav__left{display:flex;align-items:center;gap:8px;min-width:0}
+        .nav__logo{height:28px;width:auto;display:block}
+        .tab{padding:8px 10px;border-radius:10px;color:var(--ink);text-decoration:none;white-space:nowrap;border:0;background:transparent}
+        .tab:hover{background:rgba(255,255,255,.06);cursor:pointer}
+        .btn--ghost{border:1px solid #3f2b86}
 
         /* UI */
         .btn{background:linear-gradient(180deg,#7c4dff,#6b46c1);border:1px solid #8b5cf6;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
@@ -1184,22 +1210,17 @@ export default function App(){
         .panel{margin-top:16px;padding:12px;border:1px dashed #5533aa;border-radius:12px;display:grid;gap:8px}
         label{display:grid;gap:6px}
         input,textarea,select{background:#140c25;color:var(--ink);border:1px solid #3f2b86;border-radius:10px;padding:10px}
-        .rounds{display:grid;grid-template-columns:repeat(5,64px);gap:6px;min-width: 330px}
-        .rounds input{ text-align:center; padding:8px 6px }
         .tableWrap{overflow-x:auto}
         .footer{ text-align:center; opacity:.7; padding:32px 0}
-        .pageTop{margin-bottom:8px}
 
-        /* Form squares compact */
-        .formSquaresNav{display:flex;gap:6px;flex-wrap:nowrap}
-        .formSquareBtn{
-          width:24px;height:24px;border-radius:6px;border:1px solid #3f2b86;
-          display:grid;place-items:center;font-weight:800;font-size:12px;flex:0 0 auto;
-        }
-
-        /* Rundy header (labelki R1..R5) */
-        .roundsHeader{display:grid;grid-template-columns:repeat(5,64px);gap:6px;font-size:.86rem;color:#cdbfff;opacity:.9;margin-bottom:6px}
-        .roundsHeader span{display:inline-grid;place-items:center;background:#140c25;border:1px solid #3f2b86;border-radius:8px;height:28px}
+        /* Edytory wyników – hscroll + header R1..R5 */
+        .roundsHeader{display:grid;grid-template-columns:120px repeat(5,56px);gap:6;align-items:center;color:#cdbfff;opacity:.9}
+        .playersRounds{display:flex;flex-direction:column;gap:8}
+        .playerRow{display:grid;grid-template-columns:120px 1fr;gap:6;align-items:center}
+        .playerRow__name{white-space:nowrap}
+        .hscroll{overflow:auto hidden}
+        .rounds{display:grid;grid-template-columns:repeat(5,56px);gap:6;min-width:300px}
+        .rounds input::placeholder{color:#9f8bd8}
 
         /* Charts heights responsive */
         .chartH{height:260px}
@@ -1209,7 +1230,7 @@ export default function App(){
         .nextgp__img{height:40px;width:auto;border-radius:8px}
         .nextgp__text{font-weight:600}
 
-        /* NEWS spotlight + ticker */
+        /* News */
         .newsWrap{display:flex;flex-direction:column;gap:8px}
         .newsSpot{display:block;background:#140c25;border:1px solid #3f2b86;border-radius:12px;padding:12px;color:inherit;text-decoration:none}
         .newsTitle{font-weight:800;margin-bottom:4px}
@@ -1221,30 +1242,9 @@ export default function App(){
 
         /* Modal */
         .modal__backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:70}
-        .modal{width:min(92vw,720px);background:#1b1134;border:1px solid #3f2b86;border-radius:16px;padding:16px}
+        .modal{width:min(92vw,560px);background:#1b1134;border:1px solid #3f2b86;border-radius:16px;padding:16px}
 
-        /* ======= MOBILE FIXES ======= */
-        /* poziomy scroller użytku ogólnego */
-        .hscroll{
-          overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;
-          scrollbar-width:thin;
-          padding-bottom:2px;
-          max-width: 100%;
-        }
-        .hscroll::-webkit-scrollbar{height:6px}
-
-        /* Lista graczy z rundami – czytelny odstęp i zawijanie w pionie */
-        .playersRounds{display:flex; flex-direction:column; gap:10px; max-width:100%}
-        .playerRow{display:grid; grid-template-columns:110px 1fr; align-items:center; gap:10px}
-        .playerRow__name{white-space:nowrap}
-
-        /* GRIDY responsywne */
-        .grid2{grid-template-columns:1fr 1fr}
-
-        @media (max-width: 1024px){
-          .playerRow{grid-template-columns:100px 1fr}
-          .rounds, .roundsHeader{grid-template-columns:repeat(5,60px)}
-        }
+        /* MOBILE */
         @media (max-width: 900px){
           .grid2{grid-template-columns:1fr}
           .nav__inner{height:60px;padding:6px 12px}
@@ -1252,8 +1252,8 @@ export default function App(){
           .nextgp__img{height:34px}
           .chartH{height:220px}
           .profile img{width:80px;height:80px}
-          .playerRow{grid-template-columns:90px 1fr}
-          .rounds, .roundsHeader{grid-template-columns:repeat(5,56px)}
+          .roundsHeader{grid-template-columns:100px repeat(5,56px)}
+          .playerRow{grid-template-columns:100px 1fr}
         }
         @media (max-width: 600px){
           .container{padding:12px}
@@ -1262,9 +1262,9 @@ export default function App(){
           input,textarea,select{padding:9px}
           .day{height:38px}
           .newsBody{font-size:.98rem}
-          .playerRow{grid-template-columns:84px 1fr}
-          .rounds, .roundsHeader{grid-template-columns:repeat(5,52px); gap:6px}
-          .formSquareBtn{width:22px;height:22px}
+          .rounds{grid-template-columns:repeat(5,52px)}
+          .roundsHeader{grid-template-columns:90px repeat(5,52px)}
+          .playerRow{grid-template-columns:90px 1fr}
         }
       `}</style>
 
