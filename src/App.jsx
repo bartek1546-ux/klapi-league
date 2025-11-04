@@ -1,4 +1,4 @@
-https://e7.pngegg.com/pngi// App.jsx
+// App.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -1283,4 +1283,3 @@ export default function App(){
     </ErrorBoundary>
   );
 }
-mages/84/165/png-clipart-united-states-avatar-organization-information-user-avatar-service-computer-wallpaper-thumbnail.png
