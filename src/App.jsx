@@ -1,4 +1,4 @@
-// App.jsx
+https://e7.pngegg.com/pngi// App.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -56,7 +56,6 @@ const seedState = {
   players: defaultPlayers,
   gps: [{
     id:"gp1",
-    /* FIX: lokalna data, nie toISOString() */
     date: toLocalDateStr(new Date()),
     planned:false,
     results:{
@@ -158,7 +157,6 @@ const Top3Row = ({ idx, children }) => {
 };
 
 const FormSquares = ({ form, gpIds }) => {
-  // pokaż ostatnie 3 i pozwól kliknąć do odpow. GP
   const last3 = [...form].slice(-3);
   const last3Gp = gpIds ? gpIds.slice(-3) : [];
   return (
@@ -183,12 +181,12 @@ const FormSquares = ({ form, gpIds }) => {
 const NewsSpotlight = ({ posts }) => {
   const list = [...posts].sort((a,b)=>b.date-a.date);
   if(list.length===0) return <p className="muted">Brak aktualności.</p>;
-  const [idx,setIdx] = useState(1); // start od drugiego (ticker)
-  const tail = list.slice(1,3);     // maks 2 w tickerze
+  const [idx,setIdx] = useState(1);
+  const tail = list.slice(1,3);
 
   useEffect(()=>{
     if(tail.length===0) return;
-    const t = setInterval(()=>setIdx(i=>(i%tail.length)+1), 5000); // co 5 s
+    const t = setInterval(()=>setIdx(i=>(i%tail.length)+1), 5000);
     return ()=>clearInterval(t);
   },[tail.length]);
 
@@ -222,7 +220,6 @@ const Home = ({ state }) => {
   const last = played[played.length-1];
   const nextPlanned = state.gps.filter(g=>g.planned).sort((a,b)=>a.date.localeCompare(b.date))[0];
 
-  // klasyfikacja
   const standings = useMemo(()=>{
     const totals = players.map(p=>{
       const pts = played.reduce((acc,g)=> acc + sum(g.results?.[p.id]), 0);
@@ -237,7 +234,6 @@ const Home = ({ state }) => {
     return totals.sort((a,b)=>a.total-b.total);
   },[players,played]);
 
-  // wykresy
   const COLORS = ["#ffd166","#06d6a0","#1b9aaa","#ef476f","#8338ec"];
 
   const lineData = played.map(g=>{
@@ -277,7 +273,6 @@ const Home = ({ state }) => {
 
   return (
     <>
-      {/* Pasek o następnym GP – z obrazkiem */}
       <div className="nextgp">
         <img src="/nastepnegp.png" alt="Następne GP" className="nextgp__img" />
         <div className="nextgp__text">
@@ -289,7 +284,6 @@ const Home = ({ state }) => {
         </div>
       </div>
 
-      {/* Rząd 1: Aktualności + Klasyfikacja (skrót) */}
       <div className="grid2">
         <div className="card">
           <h2>Aktualności</h2>
@@ -319,7 +313,6 @@ const Home = ({ state }) => {
         </div>
       </div>
 
-      {/* Rząd 2: 2 wykresy obok siebie */}
       <div className="grid2">
         <div className="card">
           <h2>Ostatnie Grand Prix — suma punktów</h2>
@@ -420,7 +413,7 @@ const Tabela = ({ state }) => {
           </thead>
           <tbody>
             {rows.map((r,i)=>{
-              const gpIdsForForm = playedIds; // 1:1 z form (chronologicznie)
+              const gpIdsForForm = playedIds;
               return (
                 <Top3Row key={r.id} idx={i}>
                   <td>{i+1}</td>
@@ -490,7 +483,7 @@ function calcPlayerStats(state, pid){
     const vals = gps.map(g=>g.results[pid][i]).filter(x=>x!=null);
     return vals.length? (sum(vals)/vals.length) : Infinity;
   });
-  const bestRoundIndex = byRound.indexOf(Math.min(...byRound)); // 0..4
+  const bestRoundIndex = byRound.indexOf(Math.min(...byRound));
 
   return { avgPerRound, avgPerGp, bestGp, worstGp, maxSpread, wins, avgPos, form: positions, bestRoundIndex, gpIds: gps.map(g=>g.id) };
 }
@@ -718,13 +711,11 @@ const PostPage = ({ state, id, onAddComment }) => {
 /* ============================== */
 /*             ADMIN              */
 /* ============================== */
-// Uwaga: ta wersja zawiera edycję/usuwanie ROZEGRANYCH GP
 const AdminPage = ({
   state,
   onAddPlanned, onAddPlayed, onEditPlanned, onDeleteGP,
   onAddPlayer, onUpdatePlayer, onDeletePlayer,
   onAddPost, onDeletePost, adminName,
-  onAddPlayedFromEdit, // jeżeli używasz – zostaje
   onEditPlayedDate, onEditPlayedResults
 }) => {
   const [datePlan,setDatePlan] = useState("");
@@ -736,13 +727,12 @@ const AdminPage = ({
   const allPlayed  = state.gps.filter(g=>!g.planned).sort((a,b)=>a.date.localeCompare(b.date));
 
   const setScore=(pid,i,val)=>{
-    const v=val; // zostawiamy string; liczbę rzutujemy dopiero przy zapisie
+    const v=val;
     setScores(prev=>{
       const next={...prev,[pid]:[...(prev[pid]||["","","","",""])]}; next[pid][i]=v; return next;
     });
   };
 
-  // modal do edycji wyników ROZEGRANYCH GP
   const [editPlayed,setEditPlayed]=useState({open:false,gpId:null,scores:{}});
 
   return (
@@ -773,8 +763,9 @@ const AdminPage = ({
           <input type="date" value={datePlayed} onChange={e=>setDatePlayed(e.target.value)} />
         </label>
 
-        {/* nagłówki R1..R5 */}
+        {/* nagłówki R1..R5 z kolumną „Gracz” */}
         <div className="roundsHeader">
+          <span className="hdrSpacer">Gracz</span>
           <span>R1</span><span>R2</span><span>R3</span><span>R4</span><span>R5</span>
         </div>
 
@@ -897,6 +888,7 @@ const AdminPage = ({
             <h3>Edytuj wyniki rozegranego GP</h3>
 
             <div className="roundsHeader" style={{marginTop:8}}>
+              <span className="hdrSpacer">Gracz</span>
               <span>R1</span><span>R2</span><span>R3</span><span>R4</span><span>R5</span>
             </div>
 
@@ -949,7 +941,7 @@ const AdminPage = ({
   );
 };
 
-/** Osobna, odchudzona podstrona zarządzania graczami (lista + edycja) */
+/** Osobna podstrona zarządzania graczami */
 const AdminPlayers = ({ state, onAddPlayer, onUpdatePlayer, onDeletePlayer }) => {
   const [name,setName]=useState(""),[avatar,setAvatar]=useState(""),[bio,setBio]=useState("");
   const [editing,setEditing]=useState(null);
@@ -1091,7 +1083,7 @@ export default function App(){
     setState(s=>({...s,gps:s.gps.filter(g=>g.id!==id)})); addLog("GP_DELETE",`Usunięto GP (${id}).`); if (location.hash.startsWith("#/gp/")) location.hash="#/calendar";
   };
 
-  // NOWE: edycja rozegranych GP
+  // Edycja rozegranych GP
   const onEditPlayedDate=(id,newDate)=>{
     setState(s=>({...s,gps:s.gps.map(g=>g.id===id?{...g,date:newDate}:g)}));
     addLog("GP_DATE_EDIT",`Zmieniono datę rozegranego GP (${id}) na ${newDate}.`);
@@ -1168,7 +1160,12 @@ export default function App(){
 
       {/* ====== STYLES ====== */}
       <style>{`
-        :root{--ink:#e9ddff;--muted:#cdbfff;--brand:#6b46c1;--card:#1b1134;}
+        :root{
+          --ink:#e9ddff;--muted:#cdbfff;--brand:#6b46c1;--card:#1b1134;
+          /* spójne kolumny w edytorach wyników */
+          --nameCol: 120px;
+          --roundCol: 56px;
+        }
         *{box-sizing:border-box}
         body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--ink);-webkit-tap-highlight-color:transparent}
         .container{max-width:1140px;margin:0 auto;padding:16px}
@@ -1213,13 +1210,29 @@ export default function App(){
         .tableWrap{overflow-x:auto}
         .footer{ text-align:center; opacity:.7; padding:32px 0}
 
-        /* Edytory wyników – hscroll + header R1..R5 */
-        .roundsHeader{display:grid;grid-template-columns:120px repeat(5,56px);gap:6;align-items:center;color:#cdbfff;opacity:.9}
+        /* Edytory wyników – hscroll + header R1..R5 (wyrównanie) */
+        .roundsHeader{
+          display:grid;
+          grid-template-columns: var(--nameCol) repeat(5, var(--roundCol));
+          gap:6px; align-items:center; color:#cdbfff; opacity:.9;
+        }
+        .roundsHeader > span{ text-align:center; }
+        .roundsHeader .hdrSpacer{ text-align:right; padding-right:6px; color:#cdbfff; opacity:.65; }
+
         .playersRounds{display:flex;flex-direction:column;gap:8}
-        .playerRow{display:grid;grid-template-columns:120px 1fr;gap:6;align-items:center}
-        .playerRow__name{white-space:nowrap}
+        .playerRow{
+          display:grid;
+          grid-template-columns: var(--nameCol) 1fr;
+          gap:6px; align-items:center
+        }
+        .playerRow__name{white-space:nowrap; text-align:right; padding-right:6px}
+
         .hscroll{overflow:auto hidden}
-        .rounds{display:grid;grid-template-columns:repeat(5,56px);gap:6;min-width:300px}
+        .rounds{
+          display:grid;
+          grid-template-columns: repeat(5, var(--roundCol));
+          gap:6px; min-width: calc(5 * var(--roundCol) + 4 * 6px);
+        }
         .rounds input::placeholder{color:#9f8bd8}
 
         /* Charts heights responsive */
@@ -1252,8 +1265,7 @@ export default function App(){
           .nextgp__img{height:34px}
           .chartH{height:220px}
           .profile img{width:80px;height:80px}
-          .roundsHeader{grid-template-columns:100px repeat(5,56px)}
-          .playerRow{grid-template-columns:100px 1fr}
+          :root{ --nameCol: 100px; }
         }
         @media (max-width: 600px){
           .container{padding:12px}
@@ -1262,9 +1274,7 @@ export default function App(){
           input,textarea,select{padding:9px}
           .day{height:38px}
           .newsBody{font-size:.98rem}
-          .rounds{grid-template-columns:repeat(5,52px)}
-          .roundsHeader{grid-template-columns:90px repeat(5,52px)}
-          .playerRow{grid-template-columns:90px 1fr}
+          :root{ --nameCol: 90px; --roundCol: 52px; }
         }
       `}</style>
 
@@ -1273,3 +1283,4 @@ export default function App(){
     </ErrorBoundary>
   );
 }
+mages/84/165/png-clipart-united-states-avatar-organization-information-user-avatar-service-computer-wallpaper-thumbnail.png
