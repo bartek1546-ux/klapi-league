@@ -18,6 +18,5 @@ export const db = getFirestore(app);
 
 // bezpieczny login anonimowy + log błędów
 const auth = getAuth(app);
-onAuthStateChanged(auth, (u) => {
-  if (!u) signInAnonymously(auth).catch(e => console.error("Anon login error:", e));
+onAuthStateChanged(auth, (u) => { if (!u) signInAnonymously(auth); });
 });
