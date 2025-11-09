@@ -1084,8 +1084,6 @@ export default function App(){
         )}
       </Shell>
 
-      {/* ====== STYLES ====== */}
-      <style>{`/* (tu zostawiłem Twoje style 1:1 — bez zmian) */`}</style>
 
       {/* LOGIN MODAL */}
       <LoginModal open={loginOpen} onClose={onCloseLogin} onSuccess={onLoginSuccess} />
