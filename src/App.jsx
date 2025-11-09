@@ -1,5 +1,5 @@
 // src/App.jsx
-import "./app.css";
+import "./App.css";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -64,6 +64,7 @@ const route = () => {
   if(parts[0]==="player" && parts[1]) return {view:"player", id:parts[1]};
   if(parts[0]==="calendar") return {view:"calendar"};
   if(parts[0]==="tabela") return {view:"tabela"};
+  if(parts[0]==="manager") return {view:"manager"};
   if(parts[0]==="gp" && parts[1]) return {view:"gp", id:parts[1]};
   if(parts[0]==="news") return {view:"news"};
   if(parts[0]==="post" && parts[1]) return {view:"post", id:parts[1]};
@@ -89,6 +90,7 @@ const Shell = ({ adminName, onShowLogin, onLogout, children }) => {
               <a className="tab" href="#/tabela">Tabela</a>
               <a className="tab" href="#/players">Gracze</a>
               <a className="tab" href="#/calendar">Kalendarz</a>
+              <a className="tab" href="#/manager">Manager gry</a>
               <a className="tab" href="#/news">Gazetka</a>
               {adminName ? (
                 <>
@@ -314,6 +316,22 @@ const Home = ({ state }) => {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{marginTop:16}}>
+        <h2>Manager gry karcianej online</h2>
+        <p>
+          Prowadź rozgrywkę na żywo: zaznacz aktywnych graczy, zapisuj wyniki każdej rundy
+          i udostępnij je jednym kliknięciem administracji lub pozostałym uczestnikom.
+        </p>
+        <div className="managerBadges">
+          <span className="scoreBadge">🃏 Dowolna liczba rund</span>
+          <span className="scoreBadge">📊 Ranking na żywo</span>
+          <span className="scoreBadge">📎 Eksport JSON</span>
+        </div>
+        <div style={{marginTop:12}}>
+          <a className="btn small" href="#/manager">Uruchom managera →</a>
         </div>
       </div>
 
@@ -668,6 +686,369 @@ const PostPage = ({ state, id, onAddComment }) => {
         <button className="btn" onClick={()=>{ if(!nick.trim()||!txt.trim()) return alert("Podaj nick i treść"); onAddComment(post.id,{nick:nick.trim(),text:txt.trim()}); setTxt(""); }}>
           Wyślij
         </button>
+      </div>
+    </div>
+  );
+};
+
+/* ============================== */
+/*       MANAGER ROZGRYWKI        */
+/* ============================== */
+const CardManager = ({ state, adminName, onSaveLog }) => {
+  const players = state.players || [];
+  const [selectedIds, setSelectedIds] = useState(() => players.map(p => p.id));
+  const [roundCount, setRoundCount] = useState(5);
+  const [scores, setScores] = useState({});
+  const [sessionName, setSessionName] = useState(() => `Sesja ${new Date().toLocaleDateString()}`);
+  const [statusMsg, setStatusMsg] = useState("");
+
+  useEffect(() => {
+    setSelectedIds(prev => {
+      const available = players.map(p => p.id);
+      if (available.length === 0) return [];
+      const filtered = prev.filter(id => available.includes(id));
+      const unchanged = filtered.length === prev.length && filtered.every((id, idx) => id === prev[idx]);
+      if (unchanged) return prev;
+      if (filtered.length > 0) return filtered;
+      return available;
+    });
+  }, [players]);
+
+  useEffect(() => {
+    if (!statusMsg) return;
+    const timer = setTimeout(() => setStatusMsg(""), 4000);
+    return () => clearTimeout(timer);
+  }, [statusMsg]);
+
+  useEffect(() => {
+    setScores(prev => {
+      const allowed = new Set(selectedIds);
+      let changed = false;
+      const next = {};
+      Object.entries(prev).forEach(([pid, arr]) => {
+        if (allowed.has(pid)) {
+          next[pid] = arr;
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [selectedIds]);
+
+  const selectedPlayers = useMemo(
+    () => players.filter(p => selectedIds.includes(p.id)),
+    [players, selectedIds]
+  );
+
+  const togglePlayer = (pid) => {
+    setSelectedIds(prev => {
+      if (prev.includes(pid)) {
+        return prev.filter(id => id !== pid);
+      }
+      const next = [...prev, pid];
+      const order = players.map(p => p.id);
+      next.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+      return next;
+    });
+  };
+
+  const updateRoundCount = (value) => {
+    const parsed = Number(value);
+    const safe = Number.isFinite(parsed) ? Math.min(10, Math.max(1, Math.floor(parsed))) : 1;
+    setRoundCount(safe);
+  };
+
+  const setScore = (pid, roundIdx, value) => {
+    setScores(prev => {
+      const next = { ...prev };
+      const arr = [...(next[pid] || [])];
+      arr[roundIdx] = value;
+      next[pid] = arr;
+      return next;
+    });
+  };
+
+  const scoreboard = useMemo(() => {
+    return selectedPlayers.map(p => {
+      const rounds = Array.from({ length: roundCount }, (_, idx) => {
+        const raw = scores[p.id]?.[idx];
+        return raw == null ? "" : raw;
+      });
+      const normalized = rounds.map(v => {
+        if (v === "" || v == null) return 0;
+        const num = Number(v);
+        return Number.isNaN(num) ? 0 : num;
+      });
+      const total = rounds.reduce((acc, raw, idx) => acc + (raw === "" || raw == null ? 0 : normalized[idx]), 0);
+      return { player: p, rounds, normalized, total };
+    });
+  }, [selectedPlayers, roundCount, scores]);
+
+  const ranking = useMemo(() => {
+    if (scoreboard.length === 0) return [];
+    const enriched = scoreboard.map(row => {
+      const filled = row.rounds
+        .map((raw, idx) => (raw === "" || raw == null ? null : row.normalized[idx]))
+        .filter(v => v != null);
+      const best = filled.length ? Math.min(...filled) : null;
+      const worst = filled.length ? Math.max(...filled) : null;
+      return { ...row, best, worst };
+    }).sort((a, b) => a.total - b.total);
+    const leaderTotal = enriched[0]?.total ?? 0;
+    return enriched.map((row, idx) => ({
+      ...row,
+      position: idx + 1,
+      gap: idx === 0 ? 0 : row.total - leaderTotal
+    }));
+  }, [scoreboard]);
+
+  const roundStats = useMemo(() => {
+    return Array.from({ length: roundCount }, (_, idx) => {
+      const values = scoreboard
+        .map(row => ({ raw: row.rounds[idx], val: row.normalized[idx] }))
+        .filter(x => x.raw !== "" && x.raw != null)
+        .map(x => x.val);
+      if (values.length === 0) {
+        return { idx: idx + 1, min: null, max: null, avg: null };
+      }
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const avg = values.reduce((acc, v) => acc + v, 0) / values.length;
+      return { idx: idx + 1, min, max, avg };
+    });
+  }, [scoreboard, roundCount]);
+
+  const filledCells = useMemo(() => {
+    return scoreboard.reduce((acc, row) => acc + row.rounds.filter(v => v !== "" && v != null).length, 0);
+  }, [scoreboard]);
+
+  const resetScores = () => {
+    setScores({});
+    setStatusMsg("Wyniki zostały wyczyszczone.");
+  };
+
+  const copyToClipboard = async () => {
+    if (scoreboard.length === 0) {
+      setStatusMsg("Najpierw wybierz graczy.");
+      return;
+    }
+    const payload = {
+      name: sessionName || "Sesja bez nazwy",
+      roundCount,
+      createdAt: new Date().toISOString(),
+      players: scoreboard.map(row => ({ id: row.player.id, name: row.player.name })),
+      results: scoreboard.reduce((acc, row) => {
+        acc[row.player.id] = row.rounds.map((raw, idx) => {
+          if (raw === "" || raw == null) return 0;
+          const num = Number(raw);
+          return Number.isNaN(num) ? 0 : num;
+        });
+        return acc;
+      }, {}),
+      ranking: ranking.map(row => ({ position: row.position, id: row.player.id, name: row.player.name, total: row.total }))
+    };
+    const text = JSON.stringify(payload, null, 2);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatusMsg("Skopiowano dane sesji do schowka.");
+    } catch (err) {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        setStatusMsg("Skopiowano dane sesji do schowka.");
+      } catch (err2) {
+        console.error(err2);
+        setStatusMsg("Nie udało się skopiować – skorzystaj z ręcznego eksportu.");
+      }
+    }
+  };
+
+  const saveLog = async () => {
+    if (!onSaveLog || !adminName) {
+      setStatusMsg("Zapis do logów dostępny jest tylko po zalogowaniu admina.");
+      return;
+    }
+    if (ranking.length === 0) {
+      setStatusMsg("Brak wyników do zapisania w logach.");
+      return;
+    }
+    const summary = ranking
+      .map(row => `${row.position}. ${row.player.name} (${row.total})`)
+      .join(" | ");
+    try {
+      await onSaveLog(`${sessionName || "Sesja"} • rund: ${roundCount} • ${summary}`);
+      setStatusMsg("Dodano wpis w logach administracyjnych.");
+    } catch (err) {
+      console.error(err);
+      setStatusMsg("Nie udało się zapisać wpisu w logach.");
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2>Manager gry karcianej</h2>
+      <p className="muted" style={{ marginTop: 6 }}>
+        Moduł do prowadzenia spotkań online – uzupełniaj wyniki rund w czasie rzeczywistym,
+        kontroluj ranking na żywo i eksportuj dane do dalszego wykorzystania.
+      </p>
+
+      <div className="managerGrid">
+        <div className="panel">
+          <h3>1. Skład i parametry rozgrywki</h3>
+          <label>Liczba rund (1-10)
+            <input type="number" min="1" max="10" value={roundCount} onChange={e => updateRoundCount(e.target.value)} />
+          </label>
+          <label>Nazwa / notatka sesji
+            <input value={sessionName} onChange={e => setSessionName(e.target.value)} placeholder="np. Piątkowy draft online" />
+          </label>
+
+          <div>
+            <strong style={{ display: "block", marginBottom: 6 }}>Aktywni gracze</strong>
+            <div className="playerPicker">
+              {players.map(p => {
+                const active = selectedIds.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`playerToggle${active ? " active" : ""}`}
+                    onClick={() => togglePlayer(p.id)}
+                  >
+                    <img src={p.avatar || "/logo2.png"} alt="" />
+                    <span>{p.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {players.length === 0 && (
+              <div className="managerEmpty" style={{ marginTop: 8 }}>
+                Brak graczy w bazie. Dodaj ich w panelu administracyjnym.
+              </div>
+            )}
+            {players.length > 0 && selectedPlayers.length === 0 && (
+              <div className="managerEmpty" style={{ marginTop: 8 }}>
+                Wybierz co najmniej jednego gracza, aby rozpocząć.
+              </div>
+            )}
+          </div>
+
+          <div className="managerBadges" style={{ marginTop: 10 }}>
+            <span className="scoreBadge">👥 Gracze: <strong>{selectedPlayers.length}</strong></span>
+            <span className="scoreBadge">🕒 Rundy: <strong>{roundCount}</strong></span>
+            <span className="scoreBadge">✍️ Uzupełnione pola: <strong>{filledCells}</strong></span>
+          </div>
+        </div>
+
+        <div className="panel managerSummary">
+          <h3>2. Ranking na żywo</h3>
+          {ranking.length === 0 ? (
+            <div className="managerEmpty">Brak danych do pokazania – zacznij wprowadzać wyniki rund.</div>
+          ) : (
+            <>
+              <div className="tableWrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Gracz</th>
+                      <th>Suma pkt</th>
+                      <th>Strata</th>
+                      <th>Najlepsza runda</th>
+                      <th>Najgorsza runda</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ranking.map(row => (
+                      <Top3Row key={row.player.id} idx={row.position - 1}>
+                        <td>{row.position}</td>
+                        <td>{row.player.name}</td>
+                        <td>{row.total}</td>
+                        <td>{row.gap}</td>
+                        <td>{row.best != null ? row.best : "—"}</td>
+                        <td>{row.worst != null ? row.worst : "—"}</td>
+                      </Top3Row>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <strong>Statystyki rund:</strong>
+                <ul className="roundStats">
+                  {roundStats.map(stat => (
+                    <li key={stat.idx}>
+                      <span>R{stat.idx}</span>
+                      {stat.avg == null ? (
+                        <span className="muted">brak danych</span>
+                      ) : (
+                        <span>
+                          <strong>{stat.min}</strong> / {stat.max} • śr. {stat.avg.toFixed(1)}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="panel managerTable">
+        <h3>3. Wprowadzanie wyników rund</h3>
+        {selectedPlayers.length === 0 ? (
+          <div className="managerEmpty">Dodaj graczy do rozgrywki, aby rozpocząć notowanie punktów.</div>
+        ) : (
+          <>
+            <div className="roundsHeader" style={{ "--round-count": roundCount }}>
+              <span className="hdrSpacer">Gracz</span>
+              {Array.from({ length: roundCount }, (_, idx) => (
+                <span key={idx}>R{idx + 1}</span>
+              ))}
+            </div>
+
+            <div className="playersRounds">
+              {selectedPlayers.map(p => (
+                <div key={p.id} className="playerRow" style={{ "--round-count": roundCount }}>
+                  <b className="playerRow__name">{p.name}</b>
+                  <div className="hscroll">
+                    <div className="rounds" style={{ "--round-count": roundCount }}>
+                      {Array.from({ length: roundCount }, (_, idx) => (
+                        <input
+                          key={idx}
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          placeholder={`R${idx + 1}`}
+                          value={scores[p.id]?.[idx] ?? ""}
+                          onChange={e => setScore(p.id, idx, e.target.value)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="managerActions">
+          <button className="btn small" onClick={resetScores}>Wyczyść wyniki</button>
+          <button className="btn small" onClick={copyToClipboard}>Skopiuj wyniki do JSON</button>
+          {adminName && (
+            <button className="btn small" onClick={saveLog}>Zapisz skrót w logach</button>
+          )}
+        </div>
+        {statusMsg && <div className="copyState">{statusMsg}</div>}
       </div>
     </div>
   );
@@ -1041,6 +1422,10 @@ export default function App(){
   const onAddPost          = async ({title,body})=>{ await addPost({title,body,author:adminName||"Admin"}); await pushLog("POST_ADD",`Nowy post: ${title}.`); };
   const onDeletePost       = async (id)=>{ if(!confirm("Usunąć post?")) return; await deletePost(id); await pushLog("POST_DELETE",`Usunięto post (${id}).`); };
   const onAddComment       = async (postId,comment)=>{ await addComment(postId,{nick:comment.nick,text:comment.text}); await pushLog("COMMENT_ADD",`Komentarz do posta (${postId}) od ${comment.nick}.`); };
+  const onSaveManagerLog   = async (message)=>{
+    if(!message || !message.trim()) return;
+    await pushLog("CARD_MANAGER", message.trim());
+  };
 
   return (
     <ErrorBoundary>
@@ -1050,6 +1435,7 @@ export default function App(){
         {r.view==="players" && <Players state={state} />}
         {r.view==="player"  && <PlayerPage state={state} id={r.id} />}
         {r.view==="calendar"&& <CalendarPage state={state} />}
+        {r.view==="manager" && <CardManager state={state} adminName={adminName} onSaveLog={onSaveManagerLog} />}
         {r.view==="gp"      && <GPPage state={state} id={r.id} />}
         {r.view==="news"    && <NewsPage state={state} />}
         {r.view==="post"    && <PostPage state={state} id={r.id} onAddComment={onAddComment} />}
