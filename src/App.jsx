@@ -1084,7 +1084,6 @@ export default function App(){
         )}
       </Shell>
 
-
       {/* LOGIN MODAL */}
       <LoginModal open={loginOpen} onClose={onCloseLogin} onSuccess={onLoginSuccess} />
     </ErrorBoundary>
