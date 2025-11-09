@@ -3,6 +3,7 @@
   /* spójne kolumny w edytorach wyników */
   --nameCol: 120px;
   --roundCol: 56px;
+  --round-count: 5;
 }
 
 /* Twardo – żadnych szablonowych ograniczeń #root */
@@ -54,7 +55,7 @@ input,textarea,select{background:#140c25;color:var(--ink);border:1px solid #3f2b
 /* Edytory wyników – hscroll + header R1..R5 (wyrównanie) */
 .roundsHeader{
   display:grid;
-  grid-template-columns: var(--nameCol) repeat(5, var(--roundCol));
+  grid-template-columns: var(--nameCol) repeat(var(--round-count), var(--roundCol));
   gap:6px; align-items:center; color:#cdbfff; opacity:.9;
 }
 .roundsHeader > span{ text-align:center; }
@@ -71,8 +72,8 @@ input,textarea,select{background:#140c25;color:var(--ink);border:1px solid #3f2b
 .hscroll{overflow:auto hidden}
 .rounds{
   display:grid;
-  grid-template-columns: repeat(5, var(--roundCol));
-  gap:6px; min-width: calc(5 * var(--roundCol) + 4 * 6px);
+  grid-template-columns: repeat(var(--round-count), var(--roundCol));
+  gap:6px; min-width: calc(var(--round-count) * (var(--roundCol) + 6px) - 6px);
 }
 .rounds input::placeholder{color:#9f8bd8}
 
@@ -98,9 +99,31 @@ input,textarea,select{background:#140c25;color:var(--ink);border:1px solid #3f2b
 .modal__backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:70}
 .modal{width:min(92vw,560px);background:#1b1134;border:1px solid #3f2b86;border-radius:16px;padding:16px}
 
+/* Manager gry karcianej */
+.managerGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+.managerSummary{display:flex;flex-direction:column;gap:12px}
+.playerPicker{display:flex;flex-wrap:wrap;gap:8px}
+.playerToggle{display:inline-flex;align-items:center;gap:8px;background:#140c25;border:1px solid #3f2b86;border-radius:12px;padding:6px 10px;cursor:pointer;transition:background .2s,border-color .2s,color .2s;text-decoration:none;color:inherit}
+.playerToggle:hover{border-color:#8b5cf6}
+.playerToggle img{width:28px;height:28px;border-radius:8px;object-fit:cover;border:1px solid #6b46c1}
+.playerToggle.active{background:rgba(123,76,255,.22);border-color:#8b5cf6;color:#fff}
+.managerBadges{display:flex;flex-wrap:wrap;gap:8px}
+.scoreBadge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#140c25;border:1px solid #3f2b86;font-weight:600;color:#e9ddff}
+.managerActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.managerTable{margin-top:16px}
+.managerTable .table td{vertical-align:middle}
+.managerNote{margin-top:12px;display:grid;gap:6px}
+.copyState{font-size:.9rem;color:#9f8bd8}
+.roundStats{display:grid;gap:6px}
+.roundStats li{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#140c25;border:1px solid #3f2b86;border-radius:10px;color:#cdbfff;font-size:.92rem}
+.roundStats strong{color:#ffd166}
+
+.managerEmpty{padding:12px;border:1px dashed #5533aa;border-radius:12px;color:#cdbfff;opacity:.85;text-align:center}
+
 /* MOBILE */
 @media (max-width: 900px){
   .grid2{grid-template-columns:1fr}
+  .managerGrid{grid-template-columns:1fr}
   .nav__inner{height:60px;padding:6px 12px}
   .tab{padding:6px 8px}
   .nextgp__img{height:34px}
