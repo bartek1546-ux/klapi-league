@@ -1,4 +1,5 @@
 // src/App.jsx
+import "./app.css";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
