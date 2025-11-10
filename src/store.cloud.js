@@ -115,7 +115,18 @@ export async function deletePost(id) {
   await deleteDoc(doc(db, "posts", id));
 }
 export async function addComment(postId, comment) {
-  await updateDoc(doc(db, "posts", postId), {
-    comments: arrayUnion({ ...comment, ts: serverTimestamp() })
-  });
+  const ref = doc(db, "posts", postId);
+  // serverTimestamp NIE może siedzieć w arrayUnion → używamy Date.now()
+  await setDoc(
+    ref,
+    {
+      comments: arrayUnion({
+        ...comment,
+        ts: Date.now(),          // ✅ zwykły znacznik czasu (liczba)
+      }),
+      lastCommentAt: serverTimestamp(), // ✅ sentinel poza arrayUnion
+    },
+    { merge: true }
+  );
+
 }
